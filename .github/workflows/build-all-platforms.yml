@@ -256,6 +256,7 @@ jobs:
             find src-tauri/gen/apple/build -name "*.ipa" -exec cp {} dist-ios/ \;
           else
             echo "Building unsigned iOS archive via Tauri CLI (--archive-only --no-sign)..."
+            export APPLE_DEVELOPMENT_TEAM="${APPLE_DEVELOPMENT_TEAM:-0000000000}"
             npx tauri ios build --ci --archive-only --no-sign
             if [ -d src-tauri/gen/apple/build ]; then
               tar -czf dist-ios/LogicKiosk-ios-unsigned-archive.tar.gz -C src-tauri/gen/apple build
