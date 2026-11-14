@@ -1,0 +1,17 @@
+project:
+  name: LogicKiosk
+  spec: SPEC.md
+  stack:
+    backend: tauri-v2-rust
+    frontend: react-19-typescript-vite-tailwind-v4
+
+agents:
+  orchestrator:
+    contract_files:
+      - src/types/ipc.ts
+      - src-tauri/src/ipc/commands.rs
+    rules:
+      - Respect immutable IPC contract types between Rust and TypeScript.
+      - Maintain 100% offline deterministic fallback in Rust for SocraticTutorAgent.
+      - Never leak solution code blocks in Socratic hints.
+      - Store BYOK API keys exclusively in OS keyring, never in SQLite or localStorage.

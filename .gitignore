@@ -1,0 +1,23 @@
+# Dependencies & build outputs
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Rust & Tauri
+src-tauri/target/
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/.gradle/
+src-tauri/gen/apple/build/
+
+# Local databases & secrets
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.env
+
+# OS & Editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
