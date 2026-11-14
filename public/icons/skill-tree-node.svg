@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="st-path" x1="20" y1="108" x2="108" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="108" height="108" rx="28" fill="#0B0F19" stroke="#334155" stroke-width="4"/>
+  <!-- Skill path edges -->
+  <path d="M34 94 L64 64 L40 36 M64 64 L94 34" stroke="url(#st-path)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Nodes -->
+  <circle cx="34" cy="94" r="10" fill="#10B981" stroke="#0B0F19" stroke-width="3"/>
+  <circle cx="64" cy="64" r="11" fill="#06B6D4" stroke="#0B0F19" stroke-width="3"/>
+  <circle cx="40" cy="36" r="9" fill="#A855F7" stroke="#0B0F19" stroke-width="3"/>
+  <circle cx="94" cy="34" r="12" fill="#F59E0B" stroke="#0B0F19" stroke-width="3"/>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="lf-top" x1="28" y1="14" x2="100" y2="114" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#67E8F9"/>
+      <stop offset="50%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+  </defs>
+  <!-- Faceted Isometric Logic Crystal -->
+  <polygon points="64,10 102,42 88,108 64,118 40,108 26,42" fill="#0B0F19" stroke="url(#lf-top)" stroke-width="5" stroke-linejoin="round"/>
+  <polygon points="64,10 102,42 64,62 26,42" fill="#22D3EE" fill-opacity="0.28"/>
+  <polygon points="64,62 102,42 88,108 64,118" fill="#A855F7" fill-opacity="0.28"/>
+  <polygon points="64,62 26,42 40,108 64,118" fill="#06B6D4" fill-opacity="0.16"/>
+  <path d="M64 10 V118 M26 42 L64 62 L102 42" stroke="#67E8F9" stroke-width="3" stroke-opacity="0.8"/>
+</svg>

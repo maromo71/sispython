@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="lk-bg" x1="48" y1="32" x2="464" y2="480" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="55%" stop-color="#0B0F19"/>
+      <stop offset="100%" stop-color="#17112B"/>
+    </linearGradient>
+    <linearGradient id="lk-cyan-violet" x1="96" y1="96" x2="416" y2="416" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="50%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+    <linearGradient id="lk-emerald" x1="180" y1="200" x2="340" y2="340" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <filter id="lk-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer cyber squircle -->
+  <rect x="24" y="24" width="464" height="464" rx="112" fill="url(#lk-bg)"/>
+  <rect x="28" y="28" width="456" height="456" rx="108" stroke="url(#lk-cyan-violet)" stroke-width="6" stroke-opacity="0.85"/>
+
+  <!-- Subtle circuit grid lines -->
+  <g stroke="#334155" stroke-width="2.5" stroke-opacity="0.55" stroke-linecap="round">
+    <path d="M96 144 H148 L172 168"/>
+    <path d="M416 144 H364 L340 168"/>
+    <path d="M96 368 H148 L172 344"/>
+    <path d="M416 368 H364 L340 344"/>
+  </g>
+  <circle cx="96" cy="144" r="6" fill="#06B6D4"/>
+  <circle cx="416" cy="144" r="6" fill="#A855F7"/>
+  <circle cx="96" cy="368" r="6" fill="#10B981"/>
+  <circle cx="416" cy="368" r="6" fill="#06B6D4"/>
+
+  <!-- Central Hexagon Kiosk Core -->
+  <path
+    d="M256 76 L396 156 V356 L256 436 L116 356 V156 Z"
+    fill="#111827"
+    fill-opacity="0.95"
+    stroke="url(#lk-cyan-violet)"
+    stroke-width="10"
+    stroke-linejoin="round"
+    filter="url(#lk-glow)"
+  />
+
+  <!-- Inner terminal window bar -->
+  <path d="M148 184 H364" stroke="#334155" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="172" cy="164" r="7" fill="#F43F5E"/>
+  <circle cx="198" cy="164" r="7" fill="#F59E0B"/>
+  <circle cx="224" cy="164" r="7" fill="#10B981"/>
+
+  <!-- Code prompt & Python logic loop glyph -->
+  <path
+    d="M174 232 L222 268 L174 304"
+    stroke="#22D3EE"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M242 304 H304"
+    stroke="url(#lk-emerald)"
+    stroke-width="18"
+    stroke-linecap="round"
+  />
+  <!-- Spark node representing Socratic logic -->
+  <path
+    d="M332 216 L342 238 L364 248 L342 258 L332 280 L322 258 L300 248 L322 238 Z"
+    fill="#A855F7"
+  />
+</svg>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="sm-grad" x1="24" y1="16" x2="104" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#A855F7"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+  </defs>
+  <!-- Bulb / Neural core silhouette -->
+  <path
+    d="M64 16 C40 16 24 34 24 56 C24 71 32 82 42 90 C45 93 47 97 48 102 H80 C81 97 83 93 86 90 C96 82 104 71 104 56 C104 34 88 16 64 16 Z"
+    fill="#111827"
+    stroke="url(#sm-grad)"
+    stroke-width="6"
+    stroke-linejoin="round"
+  />
+  <path d="M50 112 H78" stroke="#94A3B8" stroke-width="6" stroke-linecap="round"/>
+  <!-- Question-mark neural filament (Socratic inquiry, not code solution) -->
+  <path
+    d="M52 46 C52 38 58 34 64 34 C71 34 76 39 76 45 C76 52 64 55 64 64"
+    stroke="#22D3EE"
+    stroke-width="6"
+    stroke-linecap="round"
+  />
+  <circle cx="64" cy="77" r="4.5" fill="#A855F7"/>
+  <!-- Sparkles -->
+  <path d="M16 34 L20 26 L24 34 L32 38 L24 42 L20 50 L16 42 L8 38 Z" fill="#A855F7"/>
+  <circle cx="110" cy="30" r="4" fill="#22D3EE"/>
+</svg>

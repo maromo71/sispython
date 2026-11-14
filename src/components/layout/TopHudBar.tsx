@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Award,
-  Cpu,
   Flame,
   KeyRound,
   Map,
@@ -15,6 +14,7 @@ import {
   WifiOff,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LogoMarkIcon } from '../icons/LogicKioskIcons';
 import { useThemeStore } from '../../store/useThemeStore';
 import { useProgressionStore } from '../../store/useProgressionStore';
 
@@ -56,7 +56,7 @@ export const TopHudBar: React.FC = () => {
               color: 'var(--accent-primary)',
             }}
           >
-            <Cpu className="w-4 h-4" />
+            <LogoMarkIcon className="w-6 h-6" />
           </div>
           <div>
             <div className="font-bold text-sm tracking-tight leading-none">

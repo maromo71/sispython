@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="bc-gold" x1="16" y1="24" x2="112" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#F43F5E"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="108" height="108" rx="28" fill="#0B0F19" stroke="url(#bc-gold)" stroke-width="5"/>
+  <!-- Cyber Crown -->
+  <path
+    d="M26 84 L32 42 L52 60 L64 32 L76 60 L96 42 L102 84 Z"
+    fill="#1E293B"
+    stroke="url(#bc-gold)"
+    stroke-width="5.5"
+    stroke-linejoin="round"
+  />
+  <path d="M28 96 H100" stroke="#FBBF24" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="64" cy="32" r="5" fill="#FBBF24"/>
+  <circle cx="32" cy="42" r="4.5" fill="#F59E0B"/>
+  <circle cx="96" cy="42" r="4.5" fill="#F43F5E"/>
+  <circle cx="64" cy="70" r="6" fill="#06B6D4"/>
+</svg>
