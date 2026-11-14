@@ -150,13 +150,25 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK & NDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android NDK 27 & SDK Build-Tools
+      - name: Setup Android SDK & NDK 27
+        shell: bash
         run: |
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.0.12077973"
-          echo "NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973" >> $GITHUB_ENV
+          ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SDKMANAGER=$(ls -1d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | sort -V | tail -n 1 || true)
+          if [ -z "$SDKMANAGER" ]; then
+            SDKMANAGER=$(command -v sdkmanager || true)
+          fi
+          if [ -z "$SDKMANAGER" ]; then
+            echo "Erro: sdkmanager nao encontrado em $ANDROID_HOME"
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null || true
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --install "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.0.12077973"
+          echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973" >> "$GITHUB_ENV"
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
 
       - name: Setup Rust Android Targets
         uses: dtolnay/rust-toolchain@stable
@@ -240,23 +252,14 @@ jobs:
             security list-keychain -d user -s "$KEYCHAIN_PATH"
             mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
             echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
-            npx tauri ios build --export-method ad-hoc --ci
+            npx tauri ios build --export-method release-testing --ci
             find src-tauri/gen/apple/build -name "*.ipa" -exec cp {} dist-ios/ \;
           else
-            XCODEPROJ=$(find src-tauri/gen/apple -maxdepth 2 -name "*.xcodeproj" | head -n 1)
-            SCHEME=$(xcodebuild -list -project "$XCODEPROJ" | awk '/Schemes:/{flag=1; next} flag && NF{print $1; exit}')
-            echo "Building Xcode project: $XCODEPROJ (scheme: $SCHEME) without signing..."
-            xcodebuild \
-              -project "$XCODEPROJ" \
-              -scheme "$SCHEME" \
-              -configuration Release \
-              -sdk iphoneos \
-              -derivedDataPath src-tauri/gen/apple/build/DerivedData \
-              CODE_SIGNING_ALLOWED=NO \
-              CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGN_IDENTITY="" \
-              build
-            tar -czf dist-ios/LogicKiosk-ios-unsigned-app.tar.gz -C src-tauri/gen/apple/build/DerivedData/Build/Products/Release-iphoneos .
+            echo "Building unsigned iOS archive via Tauri CLI (--archive-only --no-sign)..."
+            npx tauri ios build --ci --archive-only --no-sign
+            if [ -d src-tauri/gen/apple/build ]; then
+              tar -czf dist-ios/LogicKiosk-ios-unsigned-archive.tar.gz -C src-tauri/gen/apple build
+            fi
           fi
 
       - name: Package iOS Xcode Project
