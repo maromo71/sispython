@@ -1,69 +1,141 @@
+<div align="center">
+
+<img src="./public/icons/logickiosk-logo.svg" alt="LogicKiosk Logo" width="112" height="112" />
+
 # LogicKiosk
 
-Plataforma gamificada e **100% Open Source** para ensino de **lógica de programação e algoritmos em Python**, construída com **Tauri v2**, **Rust**, **React 19**, **TypeScript**, **Tailwind CSS v4**, **CodeMirror 6** e **SQLite** (local-first).
+**Plataforma gamificada e 100% open source para ensino de lógica e algoritmos em Python — com sandbox AST em Rust, tutor socrático anti-cola e certificação SHA-256.**
 
-> **Licença Aberta e Livre (MIT):** Este projeto é totalmente open source sob a [Licença MIT](./LICENSE). Você tem liberdade total para usar, estudar, copiar, modificar, adicionar novos recursos, redistribuir, criar produtos derivados e **comercializar / lucrar** sem restrições ou royalties.
+[![CI Build](https://img.shields.io/github/actions/workflow/status/maromo71/sispython/build-all-platforms.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI%20Build)](https://github.com/maromo71/sispython/actions/workflows/build-all-platforms.yml)
+[![Latest Release](https://img.shields.io/github/v/release/maromo71/sispython?style=for-the-badge&logo=github&color=06B6D4&label=Release)](https://github.com/maromo71/sispython/releases/latest)
+[![Stack](https://img.shields.io/badge/Tauri_v2_%C2%B7_Rust_%C2%B7_React_19-A855F7?style=for-the-badge&logo=tauri&logoColor=white)](#arquitetura-e-tecnologias)
+[![Tests](https://img.shields.io/badge/Vitest_%2B_Cargo_Test-Passing-10B981?style=for-the-badge&logo=rust&logoColor=white)](#scripts-disponíveis-e-testes)
+[![License: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT_(Uso_Livre_%26_Comercial)-F59E0B?style=for-the-badge)](./LICENSE)
+
+[Downloads & Distribuições](#-downloads-e-distribuições) · [Rodar na Web](#-como-rodar-na-web) · [Arquitetura](#arquitetura-e-tecnologias) · [Quick Start](#pré-requisitos-e-começando-rápido) · [Reportar Bug](https://github.com/maromo71/sispython/issues)
+
+</div>
 
 ---
 
 ## Sumário
 
-- [Visão Geral e Recursos](#visão-geral-e-recursos)
-- [Downloads e Distribuições](#downloads-e-distribuições)
-- [Como Rodar na Web](#como-rodar-na-web)
-- [Desenvolvimento Local (Desktop / Tauri)](#desenvolvimento-local-desktop--tauri)
-- [Builds Multiplataforma (Windows, macOS, Android e iOS)](#builds-multiplataforma-windows-macos-android-e-ios)
-- [Arquitetura e Regras Pedagógicas](#arquitetura-e-regras-pedagógicas)
-- [Atalhos de Teclado](#atalhos-de-teclado)
+- [Demonstração Visual](#-demonstração-visual)
+- [Principais Funcionalidades](#-principais-funcionalidades)
+- [Downloads e Distribuições](#-downloads-e-distribuições)
+- [Arquitetura e Tecnologias](#arquitetura-e-tecnologias)
+- [Como Rodar na Web](#-como-rodar-na-web)
+- [Pré-requisitos e Começando Rápido](#pré-requisitos-e-começando-rápido)
 - [Variáveis de Ambiente e IA (BYOK)](#variáveis-de-ambiente-e-ia-byok)
-- [Testes e Qualidade (QA)](#testes-e-qualidade-qa)
-- [Estrutura do Projeto](#estrutura-do-projeto)
-- [Contribuição e Uso Comercial](#contribuição-e-uso-comercial)
+- [Estrutura de Pastas](#estrutura-de-pastas)
+- [Scripts Disponíveis e Testes](#scripts-disponíveis-e-testes)
+- [Atalhos de Teclado](#atalhos-de-teclado)
+- [Como Contribuir, Uso Comercial e Licença](#como-contribuir-uso-comercial-e-licença)
 
 ---
 
-## Visão Geral e Recursos
+## 🎨 Demonstração Visual
 
-- **Quiosque de 3 Painéis (`SplitKioskView`):** enunciado da missão (`MissionPanel`), editor Python com syntax highlight e realce de linha (`CodeEditorPane` via CodeMirror 6) e console de execução + inspeção de variáveis (`ExecutionConsole`, `VariableWatch`).
-- **Sandbox Python em Duas Etapas (`src-tauri/src/sandbox/`):**
-  - Inspeção estática de AST com `rustpython-parser` e `rustpython-ast`, bloqueando chamadas/imports inseguros e validando estruturas obrigatórias da fase.
-  - Execução isolada com timeout padrão de `2000ms`, limite de memória (`64 MB`) e limite de saída (`10000` caracteres).
-- **Motor Pedagógico Multiagente (`src-tauri/src/agents/`):**
-  - `JudgeAgent`: executa casos de teste públicos e casos de borda ocultos.
-  - `SocraticTutorAgent`: gera perguntas socráticas guiadas sem entregar respostas prontas (com sanitizador determinístico em Rust que remove blocos de código de solução; pedidos proativos de pista ficam bloqueados em fases `BOSS`).
-  - `OfflineRulesEngine`: feedback pedagógico offline determinístico quando não há IA externa configurada.
-  - `GameMasterAgent`: XP, sequência diária (*streak* com detecção de divergência de relógio), insígnias e *Hard Gatekeeping*.
-- **Árvore de Habilidades (`SkillTreeGraph`):** progressão bloqueada por maestria até o desafio final (`BOSS`) do módulo.
-- **Carteira Acadêmica Assinada (`WalletExporter`):** exportação e verificação de certificados JSON com assinatura **SHA-256**.
-- **Tema Dual (`dark-tech` / `light-tech`):** alternância instantânea persistida por perfil.
-- **Privacidade & BYOK Segura:** chaves de API opcionais (Google Gemini Free Tier / BYOK) são gravadas exclusivamente no **Keyring / Keychain nativo do Sistema Operacional** (Windows Credential Manager, macOS/iOS Keychain ou Linux Secret Service) — nunca no SQLite ou `localStorage`.
+O **LogicKiosk** adota um layout de **Quiosque em 3 Painéis (`SplitKioskView`)** com temas `dark-tech` e `light-tech`, acompanhado de ícones vetoriais próprios para cada mecânica pedagógica:
+
+<div align="center">
+
+| Emblema | Módulo | Função na Plataforma |
+| :---: | --- | --- |
+| <img src="./public/icons/sandbox-shield.svg" width="36" alt="Sandbox AST" /> | **Sandbox AST** | Validação sintática via `rustpython-parser` + isolamento por processo |
+| <img src="./public/icons/socratic-mentor.svg" width="36" alt="Mentor Socrático" /> | **Tutor Socrático** | Perguntas guiadas com sanitização anti-código pronto |
+| <img src="./public/icons/skill-tree-node.svg" width="36" alt="Árvore de Habilidades" /> | **Skill Tree** | Progressão bloqueada por maestria (*Hard Gatekeeping*) |
+| <img src="./public/icons/boss-crown.svg" width="36" alt="Desafio Boss" /> | **Fase Boss** | Avaliação final sem pistas proativas de IA |
+| <img src="./public/icons/logic-fragment.svg" width="36" alt="Fragmentos de Lógica" /> | **XP & Fragmentos** | Gamificação baseada em tempo, tentativas e eficiência |
+| <img src="./public/icons/streak-flame.svg" width="36" alt="Ofensiva" /> | **Streak Anti-Cheat** | Sequência diária com detecção de divergência de relógio |
+| <img src="./public/icons/wallet-seal.svg" width="36" alt="Carteira SHA-256" /> | **Carteira Acadêmica** | Exportação e verificação de certificados assinados em SHA-256 |
+
+</div>
+
+```text
++-----------------------------------------------------------------------------------+
+| [LogicKiosk]  Módulo 1 [======>---] 60%   |  340 XP | 4d Streak | [Tema] [Chave]  |
++----------------------+-------------------------------+----------------------------+
+|  MISSÃO (28%)        |  EDITOR PYTHON (42%)          |  CONSOLE & WATCH (30%)     |
+|  ------------------  |  ---------------------------  |  ------------------------  |
+|  > Desafio atual     |  1  def somar(a, b):          |  [v] Caso público 1: OK    |
+|  > Requisitos AST    |  2      return a + b          |  [v] Caso oculto 2:  OK    |
+|  > Casos públicos    |                               |                            |
+|                      |                               |  Variable Watch:           |
+|  [Pedir Pista Alt+H] |  [Executar Ctrl+Enter]        |  a = 10 | b = 5 -> 15      |
++----------------------+-------------------------------+----------------------------+
+```
+
+<!-- Adicione aqui screenshots ou GIFs gravados do LogicKiosk em execução (ex: docs/preview-kiosk.gif) -->
 
 ---
 
-## Downloads e Distribuições
+## ⚡ Principais Funcionalidades
 
-Todos os instaladores e pacotes oficiais gerados pelo pipeline de CI/CD ficam disponíveis diretamente no GitHub:
+- **Quiosque de 3 Painéis (`SplitKioskView`):** enunciado em Markdown (`MissionPanel`), editor **CodeMirror 6** com realce de linha de foco (`CodeEditorPane`), console de vereditos e inspetor de variáveis (`ExecutionConsole`, `VariableWatch`).
+- **Sandbox Python em Duas Camadas (`src-tauri/src/sandbox/`):**
+  - **AST Inspector:** analisa a árvore sintática com `rustpython-parser` / `rustpython-ast`, bloqueando imports/chamadas perigosas e validando estruturas exigidas pela fase.
+  - **Runner Isolado:** executa o código em subprocesso com timeout padrão de `2000ms`, limite de `64 MB` de memória e teto de `10000` caracteres de saída.
+- **Motor Multiagente (`src-tauri/src/agents/`):**
+  - `JudgeAgent` — valida casos de teste públicos e casos de borda ocultos.
+  - `SocraticTutorAgent` — gera perguntas orientadoras e aplica **sanitização determinística em Rust** para impedir entrega de código pronto; fases `BOSS` bloqueiam pedidos proativos de pista.
+  - `OfflineRulesEngine` — garante feedback pedagógico local mesmo 100% offline.
+  - `GameMasterAgent` — calcula XP, insígnias, *Hard Gatekeeping* e *streak* protegido contra manipulação de relógio.
+- **Carteira Acadêmica (`WalletExporter`):** exporta e verifica certificados JSON assinados criptograficamente com **SHA-256**.
+- **BYOK Segura via Keyring do SO:** chaves de IA (Google Gemini Free Tier / BYOK) são armazenadas exclusivamente no cofre nativo do sistema operacional (`keyring`), nunca em SQLite ou `localStorage`.
 
-- **Releases Oficiais (Instaladores prontos por versão `v*`):**
-  https://github.com/maromo71/sispython/releases
-- **Última Release Publicada:**
-  https://github.com/maromo71/sispython/releases/latest
-- **Builds Contínuos (GitHub Actions — Artefatos de cada commit na `main`):**
-  https://github.com/maromo71/sispython/actions/workflows/build-all-platforms.yml
+---
 
-| Plataforma | Runner CI | Artefato / Formato | Como obter |
+## 📦 Downloads e Distribuições
+
+Todos os pacotes oficiais são compilados automaticamente pelo workflow [`build-all-platforms.yml`](./.github/workflows/build-all-platforms.yml):
+
+- **Releases Oficiais (Instaladores por tag `v*`):** https://github.com/maromo71/sispython/releases
+- **Última Versão Publicada:** https://github.com/maromo71/sispython/releases/latest
+- **Builds Contínuos (Artefatos de cada commit no GitHub Actions):** https://github.com/maromo71/sispython/actions/workflows/build-all-platforms.yml
+
+| Plataforma | Runner CI | Artefatos Gerados | Onde Baixar |
 | --- | --- | --- | --- |
-| **Windows (`x86_64`)** | `windows-latest` | Instaladores `.msi` e `.exe` (NSIS) | [Releases](https://github.com/maromo71/sispython/releases) / artefato `logickiosk-windows` no [Actions](https://github.com/maromo71/sispython/actions/workflows/build-all-platforms.yml) |
-| **macOS (Universal)** | `macos-latest` | `.dmg` Universal (Apple Silicon + Intel) e `LogicKiosk-macos-universal.app.tar.gz` | [Releases](https://github.com/maromo71/sispython/releases) / artefato `logickiosk-macos` no [Actions](https://github.com/maromo71/sispython/actions/workflows/build-all-platforms.yml) |
-| **Android / Android Studio** | `ubuntu-latest` | `.apk`, `.aab` e projeto completo `LogicKiosk-android-studio-project.tar.gz` | [Releases](https://github.com/maromo71/sispython/releases) / artefato `logickiosk-android` no [Actions](https://github.com/maromo71/sispython/actions/workflows/build-all-platforms.yml) |
-| **iOS / Xcode** | `macos-latest` | `LogicKiosk-ios-xcode-project.tar.gz` + `.ipa` (com assinatura Apple) ou `LogicKiosk-ios-unsigned-archive.tar.gz` (sem assinatura) | [Releases](https://github.com/maromo71/sispython/releases) / artefato `logickiosk-ios` no [Actions](https://github.com/maromo71/sispython/actions/workflows/build-all-platforms.yml) |
-| **Web (Front-end SPA)** | Qualquer servidor estático / Vite | Bundle estático em `dist/` | Gerado localmente com `npm run build` (detalhes abaixo) |
+| **Windows (`x86_64`)** | `windows-latest` | Instaladores `.msi` e `.exe` (NSIS) | [Releases](https://github.com/maromo71/sispython/releases) · `logickiosk-windows` no [Actions](https://github.com/maromo71/sispython/actions/workflows/build-all-platforms.yml) |
+| **macOS (Universal)** | `macos-latest` | `.dmg` Universal (Apple Silicon + Intel) e `.app.tar.gz` | [Releases](https://github.com/maromo71/sispython/releases) · `logickiosk-macos` no [Actions](https://github.com/maromo71/sispython/actions/workflows/build-all-platforms.yml) |
+| **Android / Android Studio** | `ubuntu-latest` | `.apk`, `.aab` e projeto `LogicKiosk-android-studio-project.tar.gz` | [Releases](https://github.com/maromo71/sispython/releases) · `logickiosk-android` no [Actions](https://github.com/maromo71/sispython/actions/workflows/build-all-platforms.yml) |
+| **iOS / Xcode** | `macos-latest` | Projeto Xcode `.tar.gz` + `.ipa` (com assinatura) ou `.xcarchive` não assinado | [Releases](https://github.com/maromo71/sispython/releases) · `logickiosk-ios` no [Actions](https://github.com/maromo71/sispython/actions/workflows/build-all-platforms.yml) |
+| **Web (SPA Vite)** | Qualquer host estático | Bundle estático em `dist/` | Gerado localmente via `npm run build` |
+
+> Para detalhes técnicos sobre assinatura iOS opcional e disparo de builds no CI, consulte [BUILD_CI.md](./BUILD_CI.md).
 
 ---
 
-## Como Rodar na Web
+## Arquitetura e Tecnologias
 
-O front-end do **LogicKiosk** é uma aplicação **React 19 + Vite** (`vite.config.ts`, porta padrão `1420`).
+| Camada | Stack Principal |
+| --- | --- |
+| **Front-end Web / UI** | React 19, TypeScript 5.7, Vite 5, Tailwind CSS v4, Zustand 5, Framer Motion, CodeMirror 6, Lucide Icons + SVGs próprios |
+| **Core Nativo (Desktop/Mobile)** | Tauri v2 (`2.1.x`), Rust (`edition 2021`), Tokio |
+| **AST & Sandbox Python** | `rustpython-parser` / `rustpython-ast` (`0.4.0`), subprocesso isolado com limites de tempo, RAM e stdout |
+| **Persistência & Segurança** | SQLite local-first (`sqlx 0.8` + migrations), OS Keyring (`keyring 3.6`), `sha2` / `hex` |
+| **IA & Fallback Offline** | Google AI Studio (Gemini Free Tier) + Ollama local opcional + `OfflineRulesEngine` em Rust |
+| **QA & Testes** | Vitest + Testing Library + jsdom (Front-end), `cargo test` + `wiremock` (Rust) |
+
+```mermaid
+flowchart LR
+    UI["React 19 + CodeMirror 6<br/>(SplitKioskView / SkillTree / Wallet)"] --> IPC["ipcClient.ts<br/>Tauri IPC (commands.rs)"]
+    IPC --> AST["ast_inspector.rs<br/>rustpython-parser"]
+    AST -->|Válido| SANDBOX["runner.rs<br/>Sandbox Python (2000ms)"]
+    AST -->|Rejeitado| SOC["SocraticTutorAgent<br/>+ Sanitizador Rust"]
+    SANDBOX --> JUDGE["JudgeAgent<br/>Testes Públicos & Ocultos"]
+    JUDGE -->|Passou| GM["GameMasterAgent<br/>XP, Streak & Hard Gatekeeping"]
+    JUDGE -->|Falhou| SOC
+    SOC -.->|BYOK via Keyring| AI["Gemini Free Tier / Ollama<br/>ou OfflineRulesEngine"]
+    GM --> DB[("SQLite Local<br/>logickiosk_state.sqlite")]
+    GM --> WALLET["WalletExporter<br/>Certificado SHA-256"]
+```
+
+---
+
+## 🌐 Como Rodar na Web
+
+O front-end do **LogicKiosk** é compilado com **Vite** (porta padrão `1420` definida em [`vite.config.ts`](./vite.config.ts)).
 
 ### 1. Servidor de desenvolvimento Web
 
@@ -74,97 +146,138 @@ npm install
 npm run dev
 ```
 
-Acesse no navegador:
+Abra no navegador em **`http://localhost:1420`**.
 
-- **URL local:** `http://localhost:1420`
+### 2. Build estático para deploy Web (`dist/`)
 
-### 2. Build de produção para hospedagem Web (`dist/`)
-
-Para gerar os arquivos estáticos prontos para **GitHub Pages**, **Vercel**, **Netlify**, **Cloudflare Pages**, **Nginx** ou qualquer servidor HTTP:
+Para publicar em **GitHub Pages**, **Vercel**, **Netlify**, **Cloudflare Pages** ou **Nginx**:
 
 ```bash
 npm install
 npm run build
-```
-
-Para testar o build de produção localmente antes do deploy:
-
-```bash
 npm run preview
 ```
 
-Os arquivos finais da aplicação Web ficam na pasta `dist/` (configurada em `frontendDist: "../dist"` no [src-tauri/tauri.conf.json](./src-tauri/tauri.conf.json)).
+Os arquivos estáticos finais serão gerados em `./dist/`.
 
-### Importante sobre o Modo Web Puro vs. Runtime Nativo (Tauri)
-
-> **Nota técnica:** Na arquitetura atual do repositório, a inspeção de AST (`rustpython-parser`), o executor sandbox Python, o banco SQLite local (`logickiosk_state.sqlite`), o Keyring do sistema e a assinatura SHA-256 residem no núcleo Rust ([src-tauri/](./src-tauri)).
-> - Quando aberto **diretamente em um navegador Web comum** (`isTauriRuntime() === false` em [src/services/ipcClient.ts](./src/services/ipcClient.ts)), a interface React carrega o layout, temas e shell de navegação normalmente sem falhar, mas não há backend IPC conectado para compilar/executar códigos Python ou persistir o currículo no SQLite.
-> - Para rodar **todas as funcionalidades ponta a ponta** (sandbox Python + tutor socrático + banco SQLite), execute via `npm run tauri dev` ou instale um dos binários nativos da seção [Downloads e Distribuições](#downloads-e-distribuições).
-> - Se quiser publicar uma versão 100% autônoma no navegador (por exemplo, integrando Pyodide/WASM ou uma API HTTP no lugar de `invoke()`), basta adaptar a camada [src/services/ipcClient.ts](./src/services/ipcClient.ts) — contribuições e forks com backend Web/WASM são bem-vindos!
+> **Modo Web Puro vs. Runtime Nativo (Tauri):**
+> Na arquitetura atual, o parser AST, o executor Python, o SQLite local, o `keyring` do SO e a assinatura SHA-256 executam no núcleo Rust ([`src-tauri/`](./src-tauri)). Ao abrir apenas o servidor Vite no navegador (`isTauriRuntime() === false` em [`src/services/ipcClient.ts`](./src/services/ipcClient.ts)), a interface React é exibida sem erros, mas sem o backend IPC para executar código Python ou persistir progresso.
+> Para rodar **todas as funcionalidades ponta a ponta**, use `npm run tauri dev` ou baixe os instaladores nativos. Caso deseje tornar a versão Web 100% autônoma no navegador (ex.: integrando **Pyodide/WASM** ou API HTTP), basta adaptar [`src/services/ipcClient.ts`](./src/services/ipcClient.ts).
 
 ---
 
-## Desenvolvimento Local (Desktop / Tauri)
+## Pré-requisitos e Começando Rápido
 
 ### Pré-requisitos
 
 - **Node.js** `22+` e **npm**
 - **Rust** (`rustup` / `cargo` estável)
-- **Dependências do Tauri v2** para seu sistema operacional:
-  - **Windows:** Microsoft C++ Build Tools + WebView2 (já presente no Windows 10/11)
+- **Python 3** instalado no sistema (utilizado pela sandbox isolada)
+- **Dependências nativas do Tauri v2:**
+  - **Windows:** Microsoft C++ Build Tools + WebView2 (nativo no Windows 10/11)
   - **macOS:** Xcode Command Line Tools (`xcode-select --install`)
   - **Linux (Ubuntu/Debian):** `libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev pkg-config`
-- **Python 3** disponível no sistema para execução isolada da sandbox (ou configuração de ambiente equivalente)
 
-### Comandos
+### Passo a passo (Aplicação Completa Tauri + Rust + SQLite)
 
-```bash
-# 1. Instalar dependências JavaScript
-npm install
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/maromo71/sispython.git
+   cd sispython
+   ```
+2. **Instale as dependências do front-end:**
+   ```bash
+   npm install
+   ```
+3. **Configure as variáveis de ambiente (opcional):**
+   ```bash
+   cp .env.example .env
+   ```
+   *(No Windows PowerShell: `Copy-Item .env.example .env`)*
+4. **Inicie o app completo em modo desenvolvimento** *(as migrations SQLite em `src-tauri/migrations/` são aplicadas automaticamente na inicialização)*:
+   ```bash
+   npm run tauri dev
+   ```
+5. **Gere o instalador de produção para seu sistema:**
+   ```bash
+   npm run tauri build
+   ```
 
-# 2. Subir o aplicativo completo (Front-end Vite + Back-end Rust/SQLite)
-npm run tauri dev
+---
 
-# 3. Gerar build instalável para o seu sistema operacional
-npm run tauri build
+## Variáveis de Ambiente e IA (BYOK)
+
+Consulte o arquivo modelo [`.env.example`](./.env.example). Chaves pessoais inseridas na interface ficam protegidas no **Keyring do Sistema Operacional**.
+
+| Variável | Valor Padrão (`.env.example`) | Finalidade |
+| --- | --- | --- |
+| `TAURI_ENV_DEBUG` | `false` | Ativa logs extras de diagnóstico no backend Tauri |
+| `LOGICKIOSK_DB_FILENAME` | `logickiosk_state.sqlite` | Nome do arquivo SQLite local de progresso |
+| `GEMINI_API_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/models` | Endpoint base do provedor Google AI Studio |
+| `GEMINI_PRIMARY_FREE_MODEL` | `gemini-3.8-flash` | Modelo primário gratuito para pistas socráticas |
+| `GEMINI_FALLBACK_FREE_MODEL` | `gemini-3.5-flash-lite` | Modelo de failover automático em caso de `429`/erro |
+| `GEMINI_OPEN_FREE_MODEL` | `gemma-4-26b-a4b-it` | Terceiro modelo aberto na cascata de fallback |
+| `GEMINI_REQUEST_TIMEOUT_MS` | `8000` | Timeout das requisições à API de IA (ms) |
+| `LOCAL_LLM_ENABLED` | `false` | Habilita LLM local via Ollama |
+| `LOCAL_LLM_ENDPOINT` | `http://127.0.0.1:11434/api/generate` | URL da instância local do Ollama |
+| `LOCAL_LLM_MODEL` | `qwen2.5-coder:3b` | Modelo local utilizado no Ollama |
+| `SANDBOX_MAX_EXECUTION_TIME_MS` | `2000` | Tempo máximo de execução de código na sandbox (ms) |
+| `SANDBOX_MAX_MEMORY_MB` | `64` | Limite de memória por execução na sandbox (MB) |
+| `SANDBOX_MAX_OUTPUT_CHARS` | `10000` | Limite máximo de caracteres capturados no stdout |
+
+---
+
+## Estrutura de Pastas
+
+```text
+sispython/
+├── .github/workflows/
+│   └── build-all-platforms.yml   # Pipeline CI/CD: QA + Windows, macOS, Android e iOS
+├── public/icons/                 # 8 ícones SVG personalizados da aplicação
+├── src/                          # Front-end React 19 + TypeScript + Tailwind CSS v4
+│   ├── components/
+│   │   ├── academic/             # WalletExporter (certificados SHA-256)
+│   │   ├── icons/                # Componentes React SVG (LogicKioskIcons.tsx)
+│   │   ├── kiosk/                # MissionPanel, CodeEditorPane, ExecutionConsole, VariableWatch
+│   │   ├── layout/               # TopHudBar, SplitKioskView
+│   │   ├── map/                  # SkillTreeGraph (Hard Gatekeeping + Boss)
+│   │   └── settings/             # ApiKeyModal (BYOK segura no Keyring)
+│   ├── services/ipcClient.ts     # Ponte IPC Tauri + detecção isTauriRuntime()
+│   ├── store/                    # Zustand stores (tema, quiosque, progressão)
+│   ├── styles/themes.css         # Temas dark-tech e light-tech
+│   └── types/ipc.ts              # Contratos TypeScript espelhados de commands.rs
+├── src-tauri/                    # Núcleo nativo Tauri v2 + Rust
+│   ├── migrations/               # 0001_initial_schema.sql (schema + Módulo 1)
+│   ├── src/agents/               # judge, socratic, offline_rules, game_master
+│   ├── src/db/                   # Repositório SQLite (sqlx)
+│   ├── src/ipc/commands.rs       # Contrato IPC simétrico com src/types/ipc.ts
+│   ├── src/sandbox/              # Parser AST (rustpython-parser) + runner isolado
+│   ├── tests/                    # Testes de integração (SQLite, Sandbox, Wiremock)
+│   ├── Cargo.toml
+│   └── tauri.conf.json
+├── .env.example
+├── AGENTS.md                     # Regras de arquitetura e fronteira IPC
+├── BUILD_CI.md                   # Guia de builds multiplataforma no Actions
+├── LICENSE                       # Licença MIT
+└── SPEC.md                       # Especificação técnica completa
 ```
 
 ---
 
-## Builds Multiplataforma (Windows, macOS, Android e iOS)
+## Scripts Disponíveis e Testes
 
-O projeto já possui pipeline automatizado em [.github/workflows/build-all-platforms.yml](./.github/workflows/build-all-platforms.yml) e documentação detalhada em [BUILD_CI.md](./BUILD_CI.md).
+| Comando | Descrição |
+| --- | --- |
+| `npm run dev` | Sobe o front-end Web Vite na porta `1420` |
+| `npm run build` | Executa `tsc -b` + `vite build` e gera o bundle Web em `dist/` |
+| `npm run preview` | Serve localmente o build de produção `dist/` |
+| `npm test` | Executa a suíte de testes Vitest (`src/test/kiosk.test.tsx`) |
+| `npm run test:watch` | Executa Vitest em modo observação |
+| `npm run tauri dev` | Inicia o aplicativo desktop completo (Front-end + Rust/SQLite) |
+| `npm run tauri build` | Gera o pacote instalável nativo para o sistema atual |
+| `cargo test --manifest-path src-tauri/Cargo.toml` | Executa todos os testes unitários e de integração em Rust |
 
-### Disparo via GitHub Actions
-
-- **Push / Pull Request em `main` ou `master`:** executa `qa-checks` (`npm test`, `npm run build`, `cargo test`) e compila os artefatos de Windows, macOS, Android Studio e iOS.
-- **Nova Release com tag (`v*`):**
-  ```bash
-  git tag v0.1.0
-  git push origin v0.1.0
-  ```
-  Anexa automaticamente todos os pacotes gerados à GitHub Release.
-- **Disparo manual:** aba **Actions → Build Multiplatform Releases (Windows, macOS, Android Studio, iOS) → Run workflow**.
-
-### Secrets opcionais para assinatura iOS
-
-Sem secrets configurados, o CI gera automaticamente o projeto Xcode (`LogicKiosk-ios-xcode-project.tar.gz`) e o `.xcarchive` não assinado (`LogicKiosk-ios-unsigned-archive.tar.gz`). Para gerar `.ipa` assinado no CI, cadastre em **Settings → Secrets and variables → Actions**:
-
-- `APPLE_DEVELOPMENT_TEAM`
-- `IOS_CERTIFICATE_BASE64`
-- `IOS_CERTIFICATE_PASSWORD`
-- `IOS_PROVISIONING_PROFILE_BASE64`
-
----
-
-## Arquitetura e Regras Pedagógicas
-
-O projeto segue especificação orientada em [SPEC.md](./SPEC.md) e regras arquiteturais em [AGENTS.md](./AGENTS.md):
-
-1. **Contrato IPC Simétrico:** estruturas serializadas entre Rust e TypeScript mantêm espelhamento estrito entre [src-tauri/src/ipc/commands.rs](./src-tauri/src/ipc/commands.rs) e [src/types/ipc.ts](./src/types/ipc.ts).
-2. **Privacidade do Tutor Socrático:** o `SocraticTutorAgent` passa por sanitização determinística em Rust para nunca retornar blocos de código com a solução pronta.
-3. **Proteção de Avaliação (`BOSS`):** fases do tipo `BOSS` bloqueiam solicitações proativas de pistas socráticas.
-4. **Segurança de Credenciais:** chaves de API BYOK utilizam exclusivamente `keyring` do sistema operacional.
+> **Observação de contrato:** ao modificar estruturas trocadas entre Rust e React, mantenha a simetria estrita entre [`src-tauri/src/ipc/commands.rs`](./src-tauri/src/ipc/commands.rs) e [`src/types/ipc.ts`](./src/types/ipc.ts) conforme definido em [`AGENTS.md`](./AGENTS.md).
 
 ---
 
@@ -172,82 +285,34 @@ O projeto segue especificação orientada em [SPEC.md](./SPEC.md) e regras arqui
 
 | Atalho | Ação |
 | --- | --- |
-| `Ctrl + Enter` | Executar / Submeter código na sandbox |
-| `Alt + H` | Solicitar pista socrática (bloqueado em fases `BOSS`) |
+| `Ctrl + Enter` | Executar e submeter código na sandbox |
+| `Alt + H` | Solicitar pista socrática *(bloqueado em fases `BOSS`)* |
 | `Alt + T` | Alternar tema (`dark-tech` / `light-tech`) |
 | `Ctrl + Shift + Enter` | Avançar para a próxima fase desbloqueada |
 
 ---
 
-## Variáveis de Ambiente e IA (BYOK)
+## Como Contribuir, Uso Comercial e Licença
 
-Um modelo completo de configuração está disponível em [.env.example](./.env.example), incluindo:
+### Como Contribuir
 
-- Banco SQLite local (`LOGICKIOSK_DB_FILENAME=logickiosk_state.sqlite`)
-- Provedor Google AI Studio Free Tier (`GEMINI_API_BASE_URL`, `GEMINI_PRIMARY_FREE_MODEL`, `GEMINI_FALLBACK_FREE_MODEL`, `GEMINI_OPEN_FREE_MODEL`)
-- Fallback local opcional via **Ollama** (`LOCAL_LLM_ENABLED`, `LOCAL_LLM_ENDPOINT`, `LOCAL_LLM_MODEL`)
-- Limites da sandbox (`SANDBOX_MAX_EXECUTION_TIME_MS=2000`, `SANDBOX_MAX_MEMORY_MB=64`, `SANDBOX_MAX_OUTPUT_CHARS=10000`)
+1. Faça um **fork** do repositório: https://github.com/maromo71/sispython
+2. Crie uma branch para sua alteração:
+   ```bash
+   git checkout -b feat/minha-melhoria
+   ```
+3. Valide os testes antes de abrir seu Pull Request:
+   ```bash
+   npm test
+   npm run build
+   cargo test --manifest-path src-tauri/Cargo.toml
+   ```
+4. Envie seu **Pull Request** descrevendo claramente a mudança.
 
----
+### Open Source Completo & Liberdade Comercial (Licença MIT)
 
-## Testes e Qualidade (QA)
+Este projeto é distribuído sob a **[Licença MIT](./LICENSE)** — uma das licenças open source mais permissivas que existem:
 
-```bash
-# Testes de interface e stores (Vitest + Testing Library + jsdom)
-npm test
-
-# Verificação de tipos TypeScript e bundle Vite
-npm run build
-
-# Testes unitários e de integração do núcleo Rust (AST, Sandbox, Agentes e SQLite)
-cargo test --manifest-path src-tauri/Cargo.toml
-```
-
----
-
-## Estrutura do Projeto
-
-```text
-sispython/
-├── .github/workflows/
-│   └── build-all-platforms.yml   # CI/CD: QA + Windows, macOS, Android e iOS
-├── src/                          # Front-end React 19 + TypeScript + Tailwind v4
-│   ├── components/
-│   │   ├── academic/             # WalletExporter (certificados SHA-256)
-│   │   ├── kiosk/                # MissionPanel, CodeEditorPane, ExecutionConsole, VariableWatch
-│   │   ├── layout/               # TopHudBar, SplitKioskView
-│   │   ├── map/                  # SkillTreeGraph (Hard Gatekeeping)
-│   │   └── settings/             # ApiKeyModal (BYOK)
-│   ├── services/ipcClient.ts     # Ponte IPC Tauri + detecção de runtime
-│   ├── store/                    # Zustand stores (tema, quiosque, progressão)
-│   ├── styles/themes.css         # Temas dark-tech / light-tech
-│   └── types/ipc.ts              # Contratos TypeScript espelhados do Rust
-├── src-tauri/                    # Núcleo nativo Tauri v2 + Rust
-│   ├── migrations/               # 0001_initial_schema.sql + semente pedagógica
-│   ├── src/agents/               # judge, socratic, offline_rules, game_master
-│   ├── src/db/                   # Repositório SQLite (sqlx)
-│   ├── src/ipc/                  # Comandos Tauri IPC
-│   ├── src/sandbox/              # Parser AST + runner isolado
-│   ├── tests/                    # Testes de integração
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-├── .env.example
-├── AGENTS.md
-├── BUILD_CI.md
-├── LICENSE                       # Licença MIT (uso livre e comercial permitido)
-├── README.md
-└── SPEC.md                       # Especificação técnica completa
-```
-
----
-
-## Contribuição e Uso Comercial
-
-Este software é publicado sob a **[Licença MIT](./LICENSE)**:
-
-- **Pode usar** para fins pessoais, educacionais, institucionais ou empresariais.
-- **Pode modificar e estender** (adicionar módulos, linguagens, suporte a WebAssembly/Pyodide, novos tutores de IA, integração LMS/SCORM/LTI etc.).
-- **Pode redistribuir, sublicenciar e lucrar** (vender licenças, oferecer como SaaS, empacotar em soluções educacionais pagas ou consultorias), mantendo apenas o aviso de copyright e a licença MIT nos arquivos derivados.
-
-Pull requests, issues e forks são muito bem-vindos em:
-https://github.com/maromo71/sispython
+- ✅ **Livre para usar:** em estudos, escolas, universidades, empresas ou projetos pessoais.
+- ✅ **Livre para mexer e adicionar:** adapte o currículo, adicione novas linguagens, crie suporte a WebAssembly/Pyodide no navegador, integre novos provedores de IA ou LMS.
+- ✅ **Livre para distribuir e lucrar:** você pode vender cópias, oferecer como produto comercial/SaaS, empacotar em cursos pagos ou soluções corporativas sem taxas ou royalties, mantendo apenas o aviso de copyright e o texto da [Licença MIT](./LICENSE).
