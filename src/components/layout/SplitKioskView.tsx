@@ -122,7 +122,7 @@ export const SplitKioskView: React.FC = () => {
   if (!activeLevel) {
     return (
       <div className="flex-1 flex items-center justify-center p-8 text-sm" style={{ color: 'var(--text-secondary)' }}>
-        Carregando fases do Módulo 1...
+        Carregando fases do currículo...
       </div>
     );
   }

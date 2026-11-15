@@ -26,7 +26,9 @@ export const WalletExporter: React.FC = () => {
   const { curriculum, updateStudentName } = useProgressionStore();
   const profile = curriculum?.profile;
   const modules = curriculum?.modules ?? [];
-  const activeModule = modules[0];
+  const [selectedModuleId, setSelectedModuleId] = useState<string>('');
+  const activeModule =
+    modules.find((m) => m.id === selectedModuleId) ?? modules[0];
 
   const [studentName, setStudentName] = useState(profile?.display_name ?? 'Estudante de Lógica');
   const [nameSaved, setNameSaved] = useState(false);
@@ -114,8 +116,36 @@ export const WalletExporter: React.FC = () => {
           </button>
         </div>
 
-        {/* Student Name Form */}
+        {/* Student Name & Module Selector Form */}
         <form onSubmit={handleSaveName} className="flex flex-wrap items-end gap-3 pt-2 border-t" style={{ borderColor: 'var(--border-subtle)' }}>
+          {modules.length > 1 && (
+            <div className="min-w-[240px]">
+              <label
+                htmlFor="wallet-module-select"
+                className="block text-[11px] font-semibold mb-1"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                Módulo do Certificado
+              </label>
+              <select
+                id="wallet-module-select"
+                value={activeModule?.id ?? ''}
+                onChange={(e) => setSelectedModuleId(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border text-xs outline-none"
+                style={{
+                  backgroundColor: 'var(--bg-canvas)',
+                  borderColor: 'var(--border-subtle)',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {modules.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex-1 min-w-[220px]">
             <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--text-secondary)' }}>
               Nome do Estudante no Certificado

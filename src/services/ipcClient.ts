@@ -1,6 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
 import type {
+  AiModuleGenerationResponse,
   CurriculumPayload,
+  ExpandModuleExercisesRequest,
+  GenerateAiModuleRequest,
   ProfileRecord,
   SignedWalletCertificate,
   SignedWalletExport,
@@ -63,5 +66,15 @@ export const ipcClient = {
 
   verifySignedWallet(certificate: SignedWalletCertificate): Promise<boolean> {
     return invoke<boolean>('verify_signed_wallet', { certificate });
+  },
+
+  generateAiModule(request: GenerateAiModuleRequest): Promise<AiModuleGenerationResponse> {
+    return invoke<AiModuleGenerationResponse>('generate_ai_module', { request });
+  },
+
+  expandModuleExercises(
+    request: ExpandModuleExercisesRequest
+  ): Promise<AiModuleGenerationResponse> {
+    return invoke<AiModuleGenerationResponse>('expand_module_exercises', { request });
   },
 };

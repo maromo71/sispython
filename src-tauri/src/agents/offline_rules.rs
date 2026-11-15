@@ -143,6 +143,38 @@ impl OfflineSocraticEngine {
                 "Você está verificando o valor sentinela 9999 ANTES de somar a leitura ao total válido e de contabilizar os alertas?",
                 "A condição do sentinela deve ser testada logo no início de cada iteração."
             ),
+            "LIST_SLICING_SUM" | "SLICE_LARGER_THAN_LIST" | "EMPTY_LIST_GUARD" => (
+                "Como seu código trata uma lista vazia antes de fatiar `[:k]` e `[-k:]`? Os dois somatórios estão separados corretamente?",
+                "Fatiamentos negativos como `[-k:]` retornam os últimos k itens mesmo quando a lista tem menos de k elementos."
+            ),
+            "DICT_FREQUENCY_NORMALIZATION" | "IGNORE_EMPTY_NORMALIZED_STRINGS" => (
+                "Você aplicou `.strip().upper()` antes de verificar se a string resultante está vazia e antes de incrementar a contagem no dicionário?",
+                "Use `contagem[chave] = contagem.get(chave, 0) + 1` após normalizar e filtrar strings vazias."
+            ),
+            "LISTCOMP_FILTER_AND_UPPER" | "BOUNDARY_GRADE_70" => (
+                "Na sua compreensão de listas, as duas condições (`ativo` verdadeiro e `nota >= 70`) estão sendo exigidas juntas com `and` e convertendo o nome para `.upper()`?",
+                "Compreensões de listas aceitam filtros compostos na cláusula `if` ao final."
+            ),
+            "MATRIX_ROW_MAX_AND_EMPTY_ROW" | "MATRIX_NEGATIVE_NUMBERS" => (
+                "O que acontece se uma linha da matriz estiver vazia ou contiver apenas números negativos? Você inicializou o máximo com `0` ou com o primeiro item da sublista?",
+                "Nunca assuma `0` como máximo inicial para listas não vazias — use `max(linha)` ou o primeiro elemento."
+            ),
+            "SAFE_AVERAGE_INCLUSIVE_BOUNDS" | "NO_VALID_ELEMENTS_RETURNS_NONE" | "EXACT_INCLUSIVE_RANGE" => (
+                "Sua comparação inclui exatamente `minimo` e `maximo` (`<=`) e retorna `None` antes de dividir quando nenhum item é válido?",
+                "Dividir por zero ocorre quando o contador de válidos é 0."
+            ),
+            "SLIDING_WINDOW_MAX_SUM" | "WINDOW_EXCEEDS_LEN" | "NEGATIVE_WINDOW_SUMS" => (
+                "Se a janela for maior que `len(serie)` ou `<= 0`, sua função retorna `0`? E para janelas válidas só com negativos, `melhor` inicia pela primeira janela?",
+                "Inicialize a melhor soma com a soma da primeira janela real, e não com `0`."
+            ),
+            "BINARY_SEARCH_FOUND" | "BINARY_SEARCH_NOT_FOUND" | "BINARY_SEARCH_EMPTY_LIST" => (
+                "O laço `while` mantém a condição `esq <= dir` e atualiza `esq = meio + 1` ou `dir = meio - 1` a cada passo para evitar loop infinito?",
+                "Use divisão inteira `// 2` para calcular o índice do meio."
+            ),
+            "RANKING_AGGREGATION_AND_TIEBREAK" | "RANKING_ALPHA_TIEBREAK" | "SCHEDULER_FILTER_AND_SORT" | "SCHEDULER_SKIP_TOO_HEAVY_TAKE_NEXT" => (
+                "Todos os critérios de desempate estão sendo aplicados na ordem correta (prioridade/pontos primeiro e critério alfabético no empate) antes do fatiamento final?",
+                "Teste mentalmente dois itens com a mesma pontuação ou prioridade para verificar a ordenação."
+            ),
             _ => (
                 "Acompanhe no Inspetor de Variáveis à direita os valores passo a passo: em qual linha o resultado calculado se distancia do esperado pelo teste?",
                 "Teste mentalmente seu código com valores de borda (zero, números negativos e limites exatos)."

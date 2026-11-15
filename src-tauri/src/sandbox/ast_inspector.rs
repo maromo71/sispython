@@ -2,6 +2,28 @@ use crate::agents::{AstInspectionReport, LevelRuleConfig, TestCaseSpec};
 use rustpython_parser::{ast, Parse};
 use std::collections::HashSet;
 
+pub const SUPPORTED_AST_NODES: &[&str] = &[
+    "FunctionDef",
+    "For",
+    "While",
+    "If",
+    "Assign",
+    "BinOp",
+    "Return",
+    "Break",
+    "Continue",
+    "Compare",
+    "Dict",
+    "List",
+    "Tuple",
+    "ListComp",
+    "Subscript",
+    "Try",
+    "Import",
+    "Eval",
+    "Exec",
+];
+
 pub struct AstInspector;
 
 impl AstInspector {
@@ -162,8 +184,15 @@ impl AstInspector {
                 Self::walk_expr(&e.value, detected, print_literals);
             }
             ast::Stmt::Try(t) => {
+                detected.insert("Try".to_string());
                 for s in &t.body {
                     Self::walk_stmt(s, detected, return_literals, print_literals);
+                }
+                for h in &t.handlers {
+                    let ast::ExceptHandler::ExceptHandler(eh) = h;
+                    for s in &eh.body {
+                        Self::walk_stmt(s, detected, return_literals, print_literals);
+                    }
                 }
                 for s in &t.orelse {
                     Self::walk_stmt(s, detected, return_literals, print_literals);
@@ -243,20 +272,24 @@ impl AstInspector {
                 Self::walk_expr(&a.value, detected, print_literals);
             }
             ast::Expr::Subscript(s) => {
+                detected.insert("Subscript".to_string());
                 Self::walk_expr(&s.value, detected, print_literals);
                 Self::walk_expr(&s.slice, detected, print_literals);
             }
             ast::Expr::List(l) => {
+                detected.insert("List".to_string());
                 for el in &l.elts {
                     Self::walk_expr(el, detected, print_literals);
                 }
             }
             ast::Expr::Tuple(t) => {
+                detected.insert("Tuple".to_string());
                 for el in &t.elts {
                     Self::walk_expr(el, detected, print_literals);
                 }
             }
             ast::Expr::Dict(d) => {
+                detected.insert("Dict".to_string());
                 for k in d.keys.iter().flatten() {
                     Self::walk_expr(k, detected, print_literals);
                 }
@@ -265,6 +298,7 @@ impl AstInspector {
                 }
             }
             ast::Expr::ListComp(lc) => {
+                detected.insert("ListComp".to_string());
                 for gen in &lc.generators {
                     Self::walk_expr(&gen.iter, detected, print_literals);
                     for cond in &gen.ifs {

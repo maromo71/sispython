@@ -1,3 +1,6 @@
+use crate::agents::curriculum_generator::{
+    VerifiedLevelSpec, MAX_EXERCISES_PER_MODULE, MIN_EXERCISES_PER_MODULE,
+};
 use crate::agents::game_master::MasteryGameMasterAgent;
 use crate::agents::{LevelRuleConfig, SignedWalletCertificate, TestCaseSpec};
 use serde::{Deserialize, Serialize};
@@ -7,6 +10,7 @@ use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const INITIAL_MIGRATION_SQL: &str = include_str!("../../migrations/0001_initial_schema.sql");
+pub const MODULES_2_3_MIGRATION_SQL: &str = include_str!("../../migrations/0002_modules_2_and_3.sql");
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProfileRecord {
@@ -124,7 +128,60 @@ impl DatabaseRepository {
             .await
             .map_err(|e| format!("Falha na migração inicial SQLite: {}", e))?;
 
-        Ok(Self { pool })
+        sqlx::raw_sql(MODULES_2_3_MIGRATION_SQL)
+            .execute(&pool)
+            .await
+            .map_err(|e| format!("Falha na migração dos Módulos 2 e 3 SQLite: {}", e))?;
+
+        let repo = Self { pool };
+        repo.reconcile_cross_module_unlocks("prof_local_01").await?;
+        Ok(repo)
+    }
+
+    async fn reconcile_cross_module_unlocks(&self, profile_id: &str) -> Result<(), String> {
+        let modules = self.get_modules().await?;
+        for pair in modules.windows(2) {
+            let prev_mod = &pair[0];
+            let next_mod = &pair[1];
+
+            let prev_boss_completed: Option<String> = sqlx::query_scalar(
+                "SELECT up.status \
+                 FROM levels l \
+                 INNER JOIN user_progress up ON up.level_id = l.id AND up.profile_id = ?1 \
+                 WHERE l.module_id = ?2 AND l.level_type = 'BOSS' \
+                 ORDER BY l.order_index DESC LIMIT 1",
+            )
+            .bind(profile_id)
+            .bind(&prev_mod.id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+            if prev_boss_completed.as_deref() == Some("COMPLETED_MASTERY") {
+                if let Some(first_next_lvl) = sqlx::query_scalar::<_, String>(
+                    "SELECT id FROM levels WHERE module_id = ?1 ORDER BY order_index ASC LIMIT 1",
+                )
+                .bind(&next_mod.id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| e.to_string())?
+                {
+                    sqlx::query(
+                        "INSERT INTO user_progress (id, profile_id, level_id, status) \
+                         VALUES (?1, ?2, ?3, 'UNLOCKED') \
+                         ON CONFLICT(profile_id, level_id) DO UPDATE SET \
+                         status = CASE WHEN status = 'LOCKED' THEN 'UNLOCKED' ELSE status END",
+                    )
+                    .bind(generate_uid("up"))
+                    .bind(profile_id)
+                    .bind(&first_next_lvl)
+                    .execute(&self.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+        Ok(())
     }
 
     pub async fn get_default_profile(&self) -> Result<ProfileRecord, String> {
@@ -180,8 +237,9 @@ impl DatabaseRepository {
              COALESCE(up.earned_xp, 0) AS earned_xp, COALESCE(up.needs_fixation_review, 0) AS needs_fixation_review, \
              (SELECT s.submitted_code FROM submissions s WHERE s.profile_id = ?1 AND s.level_id = l.id ORDER BY s.created_at DESC, s.rowid DESC LIMIT 1) AS last_submitted_code \
              FROM levels l \
+             INNER JOIN modules m ON m.id = l.module_id \
              LEFT JOIN user_progress up ON up.level_id = l.id AND up.profile_id = ?1 \
-             ORDER BY l.order_index ASC",
+             ORDER BY m.order_index ASC, l.order_index ASC",
         )
         .bind(profile_id)
         .fetch_all(&self.pool)
@@ -474,7 +532,7 @@ impl DatabaseRepository {
         let total_attempts = prev_attempts + 1;
         let already_completed = prev_status == "COMPLETED_MASTERY";
 
-        // Busca próxima fase do mesmo módulo para desbloquear (Hard Gatekeeping)
+        // Busca próxima fase do mesmo módulo; se for a última (BOSS), desbloqueia a fase 1 do próximo módulo
         let next_lvl_row = sqlx::query(
             "SELECT id FROM levels WHERE module_id = ?1 AND order_index = ?2 LIMIT 1",
         )
@@ -483,7 +541,35 @@ impl DatabaseRepository {
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
-        let next_level_id: Option<String> = next_lvl_row.map(|r| r.get("id"));
+
+        let mut next_level_id: Option<String> = next_lvl_row.map(|r| r.get("id"));
+        if next_level_id.is_none() {
+            if let Some(cur_mod_order) = sqlx::query_scalar::<_, i32>(
+                "SELECT order_index FROM modules WHERE id = ?1 LIMIT 1",
+            )
+            .bind(module_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?
+            {
+                if let Some(next_mod_id) = sqlx::query_scalar::<_, String>(
+                    "SELECT id FROM modules WHERE order_index > ?1 ORDER BY order_index ASC LIMIT 1",
+                )
+                .bind(cur_mod_order)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?
+                {
+                    next_level_id = sqlx::query_scalar::<_, String>(
+                        "SELECT id FROM levels WHERE module_id = ?1 ORDER BY order_index ASC LIMIT 1",
+                    )
+                    .bind(&next_mod_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                }
+            }
+        }
 
         let (updated_streak, new_activity_date, clock_tamper) =
             MasteryGameMasterAgent::compute_streak_update(
@@ -601,6 +687,24 @@ impl DatabaseRepository {
             reward.newly_unlocked_badges.push("AUTONOMOUS_MIND".to_string());
         }
 
+        // Ajusta insígnia de Chefão de acordo com o módulo concluído
+        reward.newly_unlocked_badges = reward
+            .newly_unlocked_badges
+            .into_iter()
+            .filter_map(|code| {
+                if code == "BOSS_SLAYER_M1" {
+                    match module_id {
+                        "mod_01_fundamentos" => Some("BOSS_SLAYER_M1".to_string()),
+                        "mod_02_estruturas" => Some("BOSS_SLAYER_M2".to_string()),
+                        "mod_03_algoritmos" => Some("BOSS_SLAYER_M3".to_string()),
+                        _ => None,
+                    }
+                } else {
+                    Some(code)
+                }
+            })
+            .collect();
+
         let mut truly_new_badges = Vec::new();
         for badge_code in &reward.newly_unlocked_badges {
             if let Some(badge_id) = sqlx::query_scalar::<_, String>(
@@ -629,6 +733,261 @@ impl DatabaseRepository {
 
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok((reward, clock_tamper))
+    }
+
+    pub async fn get_module_expansion_context(
+        &self,
+        module_id: &str,
+    ) -> Result<(ModuleRecord, Vec<(String, i32, String, String)>), String> {
+        let mod_row = sqlx::query(
+            "SELECT id, order_index, title, description, required_xp_to_unlock FROM modules WHERE id = ?1 LIMIT 1",
+        )
+        .bind(module_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("Módulo '{}' não encontrado.", module_id))?;
+
+        let module = ModuleRecord {
+            id: mod_row.get("id"),
+            order_index: mod_row.get("order_index"),
+            title: mod_row.get("title"),
+            description: mod_row.get("description"),
+            required_xp_to_unlock: mod_row.get("required_xp_to_unlock"),
+        };
+
+        let lvl_rows = sqlx::query(
+            "SELECT id, order_index, title, level_type FROM levels WHERE module_id = ?1 ORDER BY order_index ASC",
+        )
+        .bind(module_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let existing = lvl_rows
+            .into_iter()
+            .map(|r| {
+                (
+                    r.get("id"),
+                    r.get("order_index"),
+                    r.get("title"),
+                    r.get("level_type"),
+                )
+            })
+            .collect();
+
+        Ok((module, existing))
+    }
+
+    async fn insert_verified_level_with_tests(
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        profile_id: &str,
+        module_id: &str,
+        level_id: &str,
+        spec: &VerifiedLevelSpec,
+        initial_status: &str,
+    ) -> Result<(), String> {
+        let must_json = serde_json::to_string(&spec.must_contain_nodes).unwrap_or_else(|_| "[]".to_string());
+        let forb_json = serde_json::to_string(&spec.forbidden_nodes).unwrap_or_else(|_| "[]".to_string());
+
+        sqlx::query(
+            "INSERT INTO levels (id, module_id, order_index, title, level_type, problem_statement_md, starter_code, ast_must_contain_json, ast_forbidden_json, base_xp_reward, expected_time_seconds) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+        )
+        .bind(level_id)
+        .bind(module_id)
+        .bind(spec.order_index)
+        .bind(&spec.title)
+        .bind(&spec.level_type)
+        .bind(&spec.problem_statement_md)
+        .bind(&spec.starter_code)
+        .bind(&must_json)
+        .bind(&forb_json)
+        .bind(spec.base_xp_reward)
+        .bind(spec.expected_time_seconds)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        for tc in &spec.test_cases {
+            sqlx::query(
+                "INSERT INTO test_cases (id, level_id, input_data_json, expected_output_json, is_hidden_edge_case, failure_concept_tag) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            )
+            .bind(generate_uid("tc_ai"))
+            .bind(level_id)
+            .bind(&tc.input_data_json)
+            .bind(&tc.expected_output_json)
+            .bind(if tc.is_hidden_edge_case { 1 } else { 0 })
+            .bind(&tc.failure_concept_tag)
+            .execute(&mut **tx)
+            .await
+            .map_err(|e| e.to_string())?;
+        }
+
+        sqlx::query(
+            "INSERT INTO user_progress (id, profile_id, level_id, status) VALUES (?1, ?2, ?3, ?4)",
+        )
+        .bind(generate_uid("up_ai"))
+        .bind(profile_id)
+        .bind(level_id)
+        .bind(initial_status)
+        .execute(&mut **tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    pub async fn insert_custom_ai_module_atomic(
+        &self,
+        profile_id: &str,
+        title: &str,
+        description: &str,
+        levels: &[VerifiedLevelSpec],
+    ) -> Result<String, String> {
+        if !(MIN_EXERCISES_PER_MODULE..=MAX_EXERCISES_PER_MODULE).contains(&levels.len()) {
+            return Err(format!(
+                "Um módulo deve conter entre {} e {} exercícios.",
+                MIN_EXERCISES_PER_MODULE, MAX_EXERCISES_PER_MODULE
+            ));
+        }
+
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        let next_mod_order: i32 = sqlx::query_scalar(
+            "SELECT COALESCE(MAX(order_index), 0) + 1 FROM modules",
+        )
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let module_id = generate_uid("mod_ai");
+        sqlx::query(
+            "INSERT INTO modules (id, order_index, title, description, required_xp_to_unlock) \
+             VALUES (?1, ?2, ?3, ?4, 0)",
+        )
+        .bind(&module_id)
+        .bind(next_mod_order)
+        .bind(title.trim())
+        .bind(description.trim())
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        for (idx, spec) in levels.iter().enumerate() {
+            let level_id = generate_uid("lvl_ai");
+            let status = if idx == 0 { "UNLOCKED" } else { "LOCKED" };
+            Self::insert_verified_level_with_tests(
+                &mut tx,
+                profile_id,
+                &module_id,
+                &level_id,
+                spec,
+                status,
+            )
+            .await?;
+        }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(module_id)
+    }
+
+    pub async fn insert_expanded_levels_atomic(
+        &self,
+        profile_id: &str,
+        module_id: &str,
+        new_levels: &[VerifiedLevelSpec],
+    ) -> Result<(), String> {
+        if new_levels.is_empty() {
+            return Ok(());
+        }
+
+        let (_, existing) = self.get_module_expansion_context(module_id).await?;
+        let final_total = existing.len() + new_levels.len();
+        if !(MIN_EXERCISES_PER_MODULE..=MAX_EXERCISES_PER_MODULE).contains(&final_total) {
+            return Err(format!(
+                "O total final de exercícios do módulo ({}) deve permanecer entre {} e {}.",
+                final_total, MIN_EXERCISES_PER_MODULE, MAX_EXERCISES_PER_MODULE
+            ));
+        }
+
+        let boss_entry = existing
+            .iter()
+            .rev()
+            .find(|(_, _, _, ltype)| ltype == "BOSS")
+            .cloned();
+
+        let insert_start_order = boss_entry
+            .as_ref()
+            .map(|(_, ord, _, _)| *ord)
+            .unwrap_or_else(|| existing.len() as i32 + 1);
+
+        // Verifica se a fase imediatamente anterior ao ponto de inserção já foi concluída
+        let prev_level_id = existing
+            .iter()
+            .filter(|(_, ord, _, _)| *ord < insert_start_order)
+            .max_by_key(|(_, ord, _, _)| *ord)
+            .map(|(id, _, _, _)| id.clone());
+
+        let mut unlock_first_new = false;
+        if let Some(prev_id) = prev_level_id {
+            let prev_status: Option<String> = sqlx::query_scalar(
+                "SELECT status FROM user_progress WHERE profile_id = ?1 AND level_id = ?2 LIMIT 1",
+            )
+            .bind(profile_id)
+            .bind(&prev_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+            if prev_status.as_deref() == Some("COMPLETED_MASTERY") {
+                unlock_first_new = true;
+            }
+        }
+
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        if let Some((ref boss_id, _, _, _)) = boss_entry {
+            sqlx::query("UPDATE levels SET order_index = 9999 WHERE id = ?1")
+                .bind(boss_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+
+        for (offset, raw_spec) in new_levels.iter().enumerate() {
+            let mut spec = raw_spec.clone();
+            spec.order_index = insert_start_order + offset as i32;
+            if boss_entry.is_some() && spec.level_type == "BOSS" {
+                spec.level_type = "STANDARD".to_string();
+            }
+            let status = if offset == 0 && unlock_first_new {
+                "UNLOCKED"
+            } else {
+                "LOCKED"
+            };
+            let level_id = generate_uid("lvl_ai");
+            Self::insert_verified_level_with_tests(
+                &mut tx,
+                profile_id,
+                module_id,
+                &level_id,
+                &spec,
+                status,
+            )
+            .await?;
+        }
+
+        if let Some((ref boss_id, _, _, _)) = boss_entry {
+            sqlx::query("UPDATE levels SET order_index = ?1 WHERE id = ?2")
+                .bind(final_total as i32)
+                .bind(boss_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+        }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(())
     }
 
     pub async fn increment_hint_usage(&self, profile_id: &str, level_id: &str) -> Result<(), String> {

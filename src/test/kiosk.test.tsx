@@ -7,6 +7,7 @@ import { TopHudBar } from '../components/layout/TopHudBar';
 import { ExecutionConsole } from '../components/kiosk/ExecutionConsole';
 import { SkillTreeGraph } from '../components/map/SkillTreeGraph';
 import { MissionPanel } from '../components/kiosk/MissionPanel';
+import { clampExerciseCount, MAX_EXERCISES, MIN_EXERCISES } from '../components/map/AiModuleGeneratorModal';
 import type { CurriculumPayload, LevelProgressRecord, SubmitCodeResponse } from '../types/ipc';
 
 const sampleLevel: LevelProgressRecord = {
@@ -218,5 +219,29 @@ describe('LogicKiosk UI & Stores', () => {
     const bossBtn = screen.getByText('1.5 DESAFIO CHEFÃO').closest('button')!;
     fireEvent.click(bossBtn);
     expect(screen.getByRole('alert')).toHaveTextContent(/bloqueada/i);
+  });
+
+  it('impõe limites de 5 a 20 exercícios e abre modal gerador de IA no SkillTreeGraph', () => {
+    expect(MIN_EXERCISES).toBe(5);
+    expect(MAX_EXERCISES).toBe(20);
+    expect(clampExerciseCount(2)).toBe(5);
+    expect(clampExerciseCount(35)).toBe(20);
+    expect(clampExerciseCount(12)).toBe(12);
+
+    render(<SkillTreeGraph />);
+    fireEvent.click(screen.getByRole('button', { name: /gerar novo módulo com ia/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /gerar novo módulo com ia/i });
+    expect(dialog).toBeInTheDocument();
+
+    const countInput = screen.getByLabelText(/número exato de exercícios/i) as HTMLInputElement;
+    expect(countInput.min).toBe('5');
+    expect(countInput.max).toBe('20');
+
+    fireEvent.change(countInput, { target: { value: '25' } });
+    expect(countInput.value).toBe('20');
+
+    fireEvent.change(countInput, { target: { value: '1' } });
+    expect(countInput.value).toBe('5');
   });
 });

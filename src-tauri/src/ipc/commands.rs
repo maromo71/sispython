@@ -1,3 +1,6 @@
+use crate::agents::curriculum_generator::{
+    CurriculumGeneratorAgent, MAX_EXERCISES_PER_MODULE, MIN_EXERCISES_PER_MODULE,
+};
 use crate::agents::game_master::MasteryGameMasterAgent;
 use crate::agents::judge::AstJudgeAgent;
 use crate::agents::socratic::SocraticTutorAgent;
@@ -43,6 +46,30 @@ pub struct SubmitCodeResponse {
     pub reward: Option<MasteryRewardPayload>,
     pub updated_profile: ProfileRecord,
     pub clock_tamper_detected: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenerateAiModuleRequest {
+    pub title: String,
+    pub topic: String,
+    pub difficulty: String, // "INICIANTE" | "INTERMEDIARIO" | "AVANCADO"
+    pub exercise_count: usize,
+    pub custom_instructions: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExpandModuleExercisesRequest {
+    pub module_id: String,
+    pub target_exercise_count: usize,
+    pub focus_topic: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AiModuleGenerationResponse {
+    pub curriculum: CurriculumPayload,
+    pub affected_module_id: String,
+    pub generated_levels_count: usize,
+    pub provider_used: String,
 }
 
 pub fn read_api_key_from_keyring() -> Option<String> {
@@ -340,4 +367,137 @@ pub async fn export_signed_wallet(
 #[tauri::command]
 pub async fn verify_signed_wallet(certificate: SignedWalletCertificate) -> Result<bool, String> {
     Ok(MasteryGameMasterAgent::verify_wallet_signature(&certificate))
+}
+
+pub async fn core_generate_ai_module(
+    repo: &DatabaseRepository,
+    request: GenerateAiModuleRequest,
+    api_key_override: Option<String>,
+    gemini_base_url_override: Option<String>,
+) -> Result<AiModuleGenerationResponse, String> {
+    let title = request.title.trim();
+    let topic = request.topic.trim();
+    if title.is_empty() || topic.is_empty() {
+        return Err("Informe um título e um tema central para gerar o módulo.".to_string());
+    }
+    CurriculumGeneratorAgent::validate_exercise_count(request.exercise_count)?;
+
+    let resolved_key = api_key_override.or_else(read_api_key_from_keyring);
+    let generator = match gemini_base_url_override {
+        Some(base) => CurriculumGeneratorAgent::with_base_url(resolved_key, base),
+        None => CurriculumGeneratorAgent::new(resolved_key),
+    };
+
+    let description = format!(
+        "Trilha gerada por IA sobre {} (nível {}, {} fases).",
+        topic, request.difficulty, request.exercise_count
+    );
+
+    let generated = generator
+        .generate_module_levels(
+            title,
+            &description,
+            topic,
+            &request.difficulty,
+            request.exercise_count,
+            1,
+            true,
+            Vec::new(),
+            request.custom_instructions,
+        )
+        .await?;
+
+    let profile = repo.get_default_profile().await?;
+    let module_id = repo
+        .insert_custom_ai_module_atomic(&profile.id, title, &description, &generated.levels)
+        .await?;
+
+    let curriculum = core_get_curriculum(repo).await?;
+    Ok(AiModuleGenerationResponse {
+        curriculum,
+        affected_module_id: module_id,
+        generated_levels_count: generated.levels.len(),
+        provider_used: generated.provider_used,
+    })
+}
+
+pub async fn core_expand_module_exercises(
+    repo: &DatabaseRepository,
+    request: ExpandModuleExercisesRequest,
+    api_key_override: Option<String>,
+    gemini_base_url_override: Option<String>,
+) -> Result<AiModuleGenerationResponse, String> {
+    CurriculumGeneratorAgent::validate_exercise_count(request.target_exercise_count)?;
+
+    let (module, existing_levels) = repo.get_module_expansion_context(&request.module_id).await?;
+    let current_count = existing_levels.len();
+
+    if request.target_exercise_count <= current_count {
+        return Err(format!(
+            "O módulo '{}' já possui {} exercícios. Escolha um total maior até o máximo de {} (mantendo o mínimo de {}).",
+            module.title, current_count, MAX_EXERCISES_PER_MODULE, MIN_EXERCISES_PER_MODULE
+        ));
+    }
+
+    let existing_titles: Vec<String> = existing_levels.iter().map(|(_, _, t, _)| t.clone()).collect();
+    let has_boss = existing_levels.iter().any(|(_, _, _, ltype)| ltype == "BOSS");
+
+    let topic = request
+        .focus_topic
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or(&module.description)
+        .to_string();
+
+    let resolved_key = api_key_override.or_else(read_api_key_from_keyring);
+    let generator = match gemini_base_url_override {
+        Some(base) => CurriculumGeneratorAgent::with_base_url(resolved_key, base),
+        None => CurriculumGeneratorAgent::new(resolved_key),
+    };
+
+    let generated = generator
+        .generate_module_levels(
+            &module.title,
+            &module.description,
+            &topic,
+            "INTERMEDIARIO",
+            request.target_exercise_count,
+            current_count + 1,
+            !has_boss,
+            existing_titles,
+            Some(
+                "Gere novos exercícios inéditos que mantenham a progressão didática do módulo."
+                    .to_string(),
+            ),
+        )
+        .await?;
+
+    let profile = repo.get_default_profile().await?;
+    repo.insert_expanded_levels_atomic(&profile.id, &module.id, &generated.levels)
+        .await?;
+
+    let curriculum = core_get_curriculum(repo).await?;
+    Ok(AiModuleGenerationResponse {
+        curriculum,
+        affected_module_id: module.id,
+        generated_levels_count: generated.levels.len(),
+        provider_used: generated.provider_used,
+    })
+}
+
+#[tauri::command]
+pub async fn generate_ai_module(
+    state: State<'_, AppState>,
+    request: GenerateAiModuleRequest,
+) -> Result<AiModuleGenerationResponse, String> {
+    core_generate_ai_module(&state.repo, request, None, None).await
+}
+
+#[tauri::command]
+pub async fn expand_module_exercises(
+    state: State<'_, AppState>,
+    request: ExpandModuleExercisesRequest,
+) -> Result<AiModuleGenerationResponse, String> {
+    core_expand_module_exercises(&state.repo, request, None, None).await
 }

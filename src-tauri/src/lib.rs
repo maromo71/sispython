@@ -5,8 +5,9 @@ pub mod sandbox;
 
 use db::repository::DatabaseRepository;
 use ipc::commands::{
-    export_signed_wallet, get_api_key_status, get_curriculum, request_socratic_hint, save_api_key,
-    submit_code, toggle_theme, update_student_name, verify_signed_wallet, AppState,
+    expand_module_exercises, export_signed_wallet, generate_ai_module, get_api_key_status,
+    get_curriculum, request_socratic_hint, save_api_key, submit_code, toggle_theme,
+    update_student_name, verify_signed_wallet, AppState,
 };
 use std::sync::Arc;
 use tauri::Manager;
@@ -43,6 +44,8 @@ pub fn run() {
             get_api_key_status,
             export_signed_wallet,
             verify_signed_wallet,
+            generate_ai_module,
+            expand_module_exercises,
         ])
         .run(tauri::generate_context!())
         .expect("error while running LogicKiosk Tauri application");

@@ -172,3 +172,26 @@ export interface SignedWalletExport {
   approved_submissions: ApprovedSubmissionEntry[];
   html_report: string;
 }
+
+export type ModuleDifficulty = 'INICIANTE' | 'INTERMEDIARIO' | 'AVANCADO';
+
+export interface GenerateAiModuleRequest {
+  title: string;
+  topic: string;
+  difficulty: ModuleDifficulty;
+  exercise_count: number;
+  custom_instructions: string | null;
+}
+
+export interface ExpandModuleExercisesRequest {
+  module_id: string;
+  target_exercise_count: number;
+  focus_topic: string | null;
+}
+
+export interface AiModuleGenerationResponse {
+  curriculum: CurriculumPayload;
+  affected_module_id: string;
+  generated_levels_count: number;
+  provider_used: string;
+}

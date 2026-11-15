@@ -1,3 +1,4 @@
+pub mod curriculum_generator;
 pub mod game_master;
 pub mod judge;
 pub mod offline_rules;

@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { ipcClient, isTauriRuntime } from '../services/ipcClient';
-import type { CurriculumPayload, LevelProgressRecord } from '../types/ipc';
+import type {
+  AiModuleGenerationResponse,
+  CurriculumPayload,
+  ExpandModuleExercisesRequest,
+  GenerateAiModuleRequest,
+  LevelProgressRecord,
+} from '../types/ipc';
 import { useThemeStore } from './useThemeStore';
 import { useKioskStore } from './useKioskStore';
 
@@ -26,6 +32,10 @@ interface ProgressionState {
   requestHint: (level: LevelProgressRecord, code: string) => Promise<void>;
   saveApiKey: (apiKey: string) => Promise<void>;
   updateStudentName: (name: string) => Promise<void>;
+  generateAiModule: (request: GenerateAiModuleRequest) => Promise<AiModuleGenerationResponse>;
+  expandModuleExercises: (
+    request: ExpandModuleExercisesRequest
+  ) => Promise<AiModuleGenerationResponse>;
 }
 
 /** Verifica se o código contém apenas espaços em branco ou comentários # */
@@ -139,5 +149,17 @@ export const useProgressionStore = create<ProgressionState>((set, get) => ({
   updateStudentName: async (name) => {
     await ipcClient.updateStudentName(name);
     await get().loadCurriculum();
+  },
+
+  generateAiModule: async (request) => {
+    const res = await ipcClient.generateAiModule(request);
+    set({ curriculum: res.curriculum, error: null });
+    return res;
+  },
+
+  expandModuleExercises: async (request) => {
+    const res = await ipcClient.expandModuleExercises(request);
+    set({ curriculum: res.curriculum, error: null });
+    return res;
   },
 }));
